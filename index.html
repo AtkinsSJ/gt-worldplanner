@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8"/>
+	<title>World Planner</title>
+	<style type="text/css">
+		body {
+			background: #5fd5ef;
+		}
+
+		#toolbox {
+			position: fixed;
+			background: lightgreen;
+			padding: 0;
+			top: 3.5em;
+			bottom: 1em;
+			left: 1em;
+			border-radius: 0 0 0.5em 0.5em;
+		}
+		.tab {
+			display: inline;
+		}
+		.tab-radio {
+			display: none;
+		}
+		.tab-label {
+			cursor: pointer;
+			background: green;
+			padding: 0.5em;
+			border-radius: 0.5em 0.5em 0 0;
+			position: relative;
+			top: -1.8em;
+		}
+		.tab-content {
+			display: none;
+			position: absolute;
+			top: 0.25em;
+			bottom: 0.25em;
+			left: 0.25em;
+			right: 0.25em;
+			overflow: auto;
+		}
+		.tab-radio:checked ~ label {
+			background: lightgreen;
+		}
+		.tab-radio:checked ~ .tab-content {
+			display: block;
+		}
+
+		.item {
+			width: 32px;
+			height: 32px;
+			float: left;
+			position: relative;
+			margin: 4px;
+		}
+		.item input {
+			display: none;
+		}
+		.item label {
+			position: absolute;
+			left: 0;
+			right: 0;
+			top: 0;
+			bottom: 0;
+			background: no-repeat url("img/item-sprites.png") white;
+		}
+		.item :checked ~ label {
+			background-color: yellow;
+			outline: 2px dashed yellow;
+		}
+
+
+
+		#small-print {
+			font-size: 70%;
+			position: fixed;
+			right: 1em;
+			bottom: 1em;
+		}
+	</style>
+</head>
+<body>
+	<div id="toolbox">
+		<div class="tab">
+			<input class="tab-radio" type="radio" id="tab-blocks" name="tab-group" checked />
+			<label class="tab-label" for="tab-blocks">Blocks</label>
+			<section class="tab-content" id="list-blocks"></section>
+		</div>
+		<div class="tab">
+			<input class="tab-radio" type="radio" id="tab-wallpaper" name="tab-group" />
+			<label class="tab-label" for="tab-wallpaper">Wallpaper</label>
+			<section class="tab-content" id="list-wallpaper">
+				<div class="item">
+					<input type="radio" id="item-wallpaper-thing" name="items" checked />
+					<label for="item-wallpaper-thing">thing</label>
+				</div>
+			</section>
+		</div>
+		<div class="tab">
+			<input class="tab-radio" type="radio" id="tab-paint" name="tab-group" />
+			<label class="tab-label" for="tab-paint">Paint</label>
+			<section class="tab-content" id="list-paint">
+				Blah blah blah paint
+			</section>
+		</div>
+	</div>
+
+	<footer id="small-print">
+		<a href="http://growtopiagame.com/" target="_blank">Growtopia</a> © Copyright Robinson Technologies Corporation and Hamumu Games, Inc.
+	</footer>
+
+	<script type="text/javascript">
+		var blocks = [
+			{ "name": "dirt", 				"pos": [1, 0] },
+			{ "name": "lava", 				"pos": [2, 0] },
+			{ "name": "white-door", 		"pos": [3, 0] },
+			{ "name": "bedrock", 			"pos": [4, 0] },
+			{ "name": "rock", 				"pos": [5, 0] },
+			{ "name": "door", 				"pos": [6, 0] },
+			{ "name": "grass", 				"pos": [8, 0] },
+			{ "name": "sign", 				"pos": [10, 0] },
+			{ "name": "daisy", 				"pos": [11, 0] },
+			{ "name": "arrow-sign",			"pos": [12, 0] },
+			{ "name": "crappy-sign",		"pos": [13, 0] },
+			{ "name": "danger-sign",		"pos": [14, 0] },
+			{ "name": "dungeon-door",		"pos": [15, 0] },
+
+			{ "name": "portcullis", 		"pos": [14, 1] },
+			{ "name": "boombox", 			"pos": [15, 1] },
+
+			{ "name": "old-timey-radio", 	"pos": [0, 2] },
+
+			{ "name": "wood-block", 		"pos": [2, 3] },
+			{ "name": "wooden-platform",	"pos": [3, 3] },
+			{ "name": "toilet",				"pos": [5, 3] },
+			{ "name": "disco-ball",			"pos": [9, 3] },
+			{ "name": "bricks",				"pos": [10, 3] },
+			{ "name": "mystery-block",		"pos": [12, 3] },
+		];
+
+		// Initialise blocks
+		var blocksList = document.getElementById("list-blocks");
+		var blocksString = "";
+		for (var i = 0; i < blocks.length; i++) {
+			var block = blocks[i];
+			// Laborious element creation
+			blocksString += '<div class="item">\
+					<input type="radio" id="item-wallpaper-' + block.name + '" name="items" checked />\
+					<label for="item-wallpaper-' + block.name + '" style="background-position: '
+						+ (-32*block.pos[0]) +'px ' + (-32*block.pos[1]) + 'px"/>\
+				</div>';
+		}
+		blocksList.innerHTML = blocksString;
+	</script>
+</body>
+</html>
