@@ -92,27 +92,27 @@
 	</style>
 </head>
 <body>
-	<div id="toolbox">
+	<form id="toolbox">
 		<div class="tab">
-			<input class="tab-radio" type="radio" id="tab-blocks" name="tab-group" value="block" checked />
+			<input class="tab-radio" type="radio" id="tab-blocks" name="tabGroup" value="blocks" checked />
 			<label class="tab-label" for="tab-blocks">Blocks</label>
 			<section class="tab-content" id="list-blocks"></section>
 		</div>
 		<div class="tab">
-			<input class="tab-radio" type="radio" id="tab-wallpaper" name="tab-group" value="background" />
-			<label class="tab-label" for="tab-wallpaper">Wallpaper</label>
-			<section class="tab-content" id="list-wallpaper">
+			<input class="tab-radio" type="radio" id="tab-backgrounds" name="tabGroup" value="backgrounds" />
+			<label class="tab-label" for="tab-backgrounds">Wallpaper</label>
+			<section class="tab-content" id="list-backgrounds">
 				Backgrounds go here
 			</section>
 		</div>
 		<div class="tab">
-			<input class="tab-radio" type="radio" id="tab-paint" name="tab-group" value="paint" />
+			<input class="tab-radio" type="radio" id="tab-paints" name="tabGroup" value="paints" />
 			<label class="tab-label" for="tab-paint">Paint</label>
 			<section class="tab-content" id="list-paint">
 				Paint goes here
 			</section>
 		</div>
-	</div>
+	</form>
 
 	<canvas id="canvas">
 		<p>Sorry, it looks like your web browser can't handle the awesomeness of this world planner! :(</p>
@@ -124,65 +124,93 @@
 	</footer>
 
 	<script type="text/javascript">
-		var blocks = [
-			{ "name": "dirt", 				"pos": [1, 0] },
-			{ "name": "lava", 				"pos": [2, 0] },
-			{ "name": "white-door", 		"pos": [3, 0] },
-			{ "name": "bedrock", 			"pos": [4, 0] },
-			{ "name": "rock", 				"pos": [5, 0] },
-			{ "name": "door", 				"pos": [6, 0] },
-			{ "name": "grass", 				"pos": [8, 0] },
-			{ "name": "sign", 				"pos": [10, 0] },
-			{ "name": "daisy", 				"pos": [11, 0] },
-			{ "name": "arrow-sign",			"pos": [12, 0] },
-			{ "name": "crappy-sign",		"pos": [13, 0] },
-			{ "name": "danger-sign",		"pos": [14, 0] },
-			{ "name": "dungeon-door",		"pos": [15, 0] },
 
-			{ "name": "portcullis", 		"pos": [14, 1] },
-			{ "name": "boombox", 			"pos": [15, 1] },
+		var itemData = {
+			"blocks": [
+				{ "name": "dirt", 				"pos": [1, 0] },
+				{ "name": "lava", 				"pos": [2, 0] },
+				{ "name": "white-door", 		"pos": [3, 0] },
+				{ "name": "bedrock", 			"pos": [4, 0] },
+				{ "name": "rock", 				"pos": [5, 0] },
+				{ "name": "door", 				"pos": [6, 0] },
+				{ "name": "grass", 				"pos": [8, 0] },
+				{ "name": "sign", 				"pos": [10, 0] },
+				{ "name": "daisy", 				"pos": [11, 0] },
+				{ "name": "arrow-sign",			"pos": [12, 0] },
+				{ "name": "crappy-sign",		"pos": [13, 0] },
+				{ "name": "danger-sign",		"pos": [14, 0] },
+				{ "name": "dungeon-door",		"pos": [15, 0] },
 
-			{ "name": "old-timey-radio", 	"pos": [0, 2] },
+				{ "name": "portcullis", 		"pos": [14, 1] },
+				{ "name": "boombox", 			"pos": [15, 1] },
 
-			{ "name": "wood-block", 		"pos": [2, 3] },
-			{ "name": "wooden-platform",	"pos": [3, 3] },
-			{ "name": "toilet",				"pos": [5, 3] },
-			{ "name": "disco-ball",			"pos": [9, 3] },
-			{ "name": "bricks",				"pos": [10, 3] },
-			{ "name": "mystery-block",		"pos": [12, 3] },
-		];
+				{ "name": "old-timey-radio", 	"pos": [0, 2] },
 
-		// Initialise blocks
-		var blocksList = document.getElementById("list-blocks");
-		var blocksString = "";
-		for (var i = 0; i < blocks.length; i++) {
-			var block = blocks[i];
-			// Laborious element creation
-			blocksString += '<div class="item">\
-					<input type="radio" id="item-wallpaper-' + block.name + '" name="items" value="' + i +'" />\
-					<label for="item-wallpaper-' + block.name + '" style="background-position: '
-						+ (-32*block.pos[0]) +'px ' + (-32*block.pos[1]) + 'px"/>\
-				</div>';
-		}
-		blocksList.innerHTML = blocksString;
+				{ "name": "wood-block", 		"pos": [2, 3] },
+				{ "name": "wooden-platform",	"pos": [3, 3] },
+				{ "name": "toilet",				"pos": [5, 3] },
+				{ "name": "disco-ball",			"pos": [9, 3] },
+				{ "name": "bricks",				"pos": [10, 3] },
+				{ "name": "mystery-block",		"pos": [12, 3] },
+			],
+
+			"backgrounds": [
+				{ "name": "cave", 				"pos": [7, 0] },
+				{ "name": "wooden", 			"pos": [10, 1] },
+			]
+		};
 
 		var canvas = document.getElementById("canvas");
+		var toolbox = document.forms.toolbox;
 
 		function World(w, h) {
 			this.w = w;
 			this.h = h;
 			this.blocks = [];
-			this.wallpaper = [];
+			this.backgrounds = [];
 
 			this.selection = {"tab": "block", "item": 0};
 
 			// Create stuff!
 			for (var y=0; y<h; y++) {
 				this.blocks[y] = [];
-				this.wallpaper[y] = [];
+				this.backgrounds[y] = [];
 			}
 		}
 		var world = new World(20, 15);
+		world.selection.tab = toolbox.tabGroup.value;
+
+		// Initialise toolbox
+		var tabButtons = toolbox.tabGroup;
+		for (var i = 0; i < tabButtons.length; i++) {
+			tabButtons[i].addEventListener("click", function(event) {
+				world.selection.tab = event.target.value;
+
+				world.selection.item = toolbox["items-" + event.target.value].value;
+			});
+		}
+		for (var itemGroup in itemData) {
+			var blocksList = document.getElementById("list-" + itemGroup);
+			var blocksString = "";
+			for (var i = 0; i < itemData[itemGroup].length; i++) {
+				var item = itemData[itemGroup][i];
+				// Laborious element creation
+				blocksString += '<div class="item">\
+						<input type="radio" id="item-' + itemGroup + '-' + item.name + '" name="items-' + itemGroup + '" value="' + i +'" />\
+						<label for="item-' + itemGroup + '-' + item.name + '" style="background-position: '
+							+ (-32*item.pos[0]) +'px ' + (-32*item.pos[1]) + 'px"/>\
+					</div>';
+			}
+			blocksList.innerHTML = blocksString;
+
+			var blockButtons = toolbox["items-" + itemGroup];
+			blockButtons[0].checked = true;
+			for (var i = 0; i < blockButtons.length; i++) {
+				blockButtons[i].addEventListener("click", function(event) {
+					world.selection.item = event.target.value;
+				});
+			}
+		}
 
 		if (canvas.getContext) {
 			var tileSize = 32;
@@ -209,20 +237,18 @@
 
 				for (var y=0; y<world.h; y++) {
 					for (var x=0; x<world.w; x++) {
-						var block = blocks[world.blocks[y][x]];
+
+						var background = itemData.backgrounds[world.backgrounds[y][x]];
+						if (background) {
+							context.drawImage(blocksImage, background.pos[0] * tileSize, background.pos[1] * tileSize, tileSize, tileSize, x * tileSize, y * tileSize, tileSize, tileSize);
+						}
+
+						var block = itemData.blocks[world.blocks[y][x]];
 						if (block) {
 							context.drawImage(blocksImage, block.pos[0] * tileSize, block.pos[1] * tileSize, tileSize, tileSize, x * tileSize, y * tileSize, tileSize, tileSize);
 						}
 					}
 				}
-			}
-
-
-			var blockButtons = document.getElementsByName("items");
-			for (var i = 0; i < blockButtons.length; i++) {
-				blockButtons[i].addEventListener("click", function(event) {
-					world.selection.item = event.target.value;
-				});
 			}
 
 			canvas.addEventListener("click", function(event) {
@@ -234,8 +260,11 @@
 				if (tx >= 0 && tx < world.w && ty >= 0 && ty < world.h) {
 					// Actually do something.
 					switch (world.selection.tab) {
-						case "block": {
+						case "blocks": {
 							world.blocks[ty][tx] = world.selection.item;
+						} break;
+						case "backgrounds": {
+							world.backgrounds[ty][tx] = world.selection.item;
 						} break;
 					}
 				}
