@@ -4,6 +4,11 @@
 	<meta charset="utf-8"/>
 	<title>World Planner</title>
 	<style type="text/css">
+		html, body {
+			margin: 0;
+			overflow: hidden;
+		}
+
 		body {
 			background: #5fd5ef;
 		}
@@ -29,7 +34,7 @@
 			padding: 0.5em;
 			border-radius: 0.5em 0.5em 0 0;
 			position: relative;
-			top: -1.8em;
+			top: -1.6em;
 		}
 		.tab-content {
 			display: none;
@@ -71,43 +76,51 @@
 		}
 
 
+		#canvas {
+			width: 100%;
+			height: 100%;
+		}
+
 
 		#small-print {
 			font-size: 70%;
 			position: fixed;
 			right: 1em;
 			bottom: 1em;
+			text-align: right;
 		}
 	</style>
 </head>
 <body>
 	<div id="toolbox">
 		<div class="tab">
-			<input class="tab-radio" type="radio" id="tab-blocks" name="tab-group" checked />
+			<input class="tab-radio" type="radio" id="tab-blocks" name="tab-group" value="block" checked />
 			<label class="tab-label" for="tab-blocks">Blocks</label>
 			<section class="tab-content" id="list-blocks"></section>
 		</div>
 		<div class="tab">
-			<input class="tab-radio" type="radio" id="tab-wallpaper" name="tab-group" />
+			<input class="tab-radio" type="radio" id="tab-wallpaper" name="tab-group" value="background" />
 			<label class="tab-label" for="tab-wallpaper">Wallpaper</label>
 			<section class="tab-content" id="list-wallpaper">
-				<div class="item">
-					<input type="radio" id="item-wallpaper-thing" name="items" checked />
-					<label for="item-wallpaper-thing">thing</label>
-				</div>
+				Backgrounds go here
 			</section>
 		</div>
 		<div class="tab">
-			<input class="tab-radio" type="radio" id="tab-paint" name="tab-group" />
+			<input class="tab-radio" type="radio" id="tab-paint" name="tab-group" value="paint" />
 			<label class="tab-label" for="tab-paint">Paint</label>
 			<section class="tab-content" id="list-paint">
-				Blah blah blah paint
+				Paint goes here
 			</section>
 		</div>
 	</div>
 
+	<canvas id="canvas">
+		<p>Sorry, it looks like your web browser can't handle the awesomeness of this world planner! :(</p>
+	</canvas>
+
 	<footer id="small-print">
 		<a href="http://growtopiagame.com/" target="_blank">Growtopia</a> © Copyright Robinson Technologies Corporation and Hamumu Games, Inc.
+		<br/> Images used with permission.
 	</footer>
 
 	<script type="text/javascript">
@@ -146,12 +159,90 @@
 			var block = blocks[i];
 			// Laborious element creation
 			blocksString += '<div class="item">\
-					<input type="radio" id="item-wallpaper-' + block.name + '" name="items" checked />\
+					<input type="radio" id="item-wallpaper-' + block.name + '" name="items" value="' + i +'" />\
 					<label for="item-wallpaper-' + block.name + '" style="background-position: '
 						+ (-32*block.pos[0]) +'px ' + (-32*block.pos[1]) + 'px"/>\
 				</div>';
 		}
 		blocksList.innerHTML = blocksString;
+
+		var canvas = document.getElementById("canvas");
+
+		function World(w, h) {
+			this.w = w;
+			this.h = h;
+			this.blocks = [];
+			this.wallpaper = [];
+
+			this.selection = {"tab": "block", "item": 0};
+
+			// Create stuff!
+			for (var y=0; y<h; y++) {
+				this.blocks[y] = [];
+				this.wallpaper[y] = [];
+			}
+		}
+		var world = new World(20, 15);
+
+		if (canvas.getContext) {
+			var tileSize = 32;
+			var context = canvas.getContext("2d");
+
+			var blocksImage = new Image();
+			blocksImage.onLoad = function() {
+				context.drawImage(blocksImage, 0, 0, 256, 256);
+			};
+			blocksImage.src = "img/item-sprites.png";
+			if (blocksImage.complete) blocksImage.onLoad();
+
+			document.body.onresize = function() {
+				canvas.width = window.innerWidth;
+				canvas.height = window.innerHeight;
+
+				redraw(context, world);
+			};
+			document.body.onresize();
+
+			function redraw(context, world) {
+
+				context.clearRect(0,0, canvas.width, canvas.height);
+
+				for (var y=0; y<world.h; y++) {
+					for (var x=0; x<world.w; x++) {
+						var block = blocks[world.blocks[y][x]];
+						if (block) {
+							context.drawImage(blocksImage, block.pos[0] * tileSize, block.pos[1] * tileSize, tileSize, tileSize, x * tileSize, y * tileSize, tileSize, tileSize);
+						}
+					}
+				}
+			}
+
+
+			var blockButtons = document.getElementsByName("items");
+			for (var i = 0; i < blockButtons.length; i++) {
+				blockButtons[i].addEventListener("click", function(event) {
+					world.selection.item = event.target.value;
+				});
+			}
+
+			canvas.addEventListener("click", function(event) {
+
+				var tx = Math.floor(event.clientX / tileSize)
+				var ty = Math.floor(event.clientY / tileSize);
+				console.log("Tile pos:", tx, ty);
+				
+				if (tx >= 0 && tx < world.w && ty >= 0 && ty < world.h) {
+					// Actually do something.
+					switch (world.selection.tab) {
+						case "block": {
+							world.blocks[ty][tx] = world.selection.item;
+						} break;
+					}
+				}
+
+				redraw(context, world);
+			});
+		}
 	</script>
 </body>
 </html>
