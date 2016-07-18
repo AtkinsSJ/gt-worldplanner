@@ -74,6 +74,9 @@
 			background-color: yellow;
 			outline: 2px dashed yellow;
 		}
+		.item :checked.flipped ~ label {
+			transform: scaleX(-1);
+		}
 
 
 		#canvas {
@@ -127,31 +130,31 @@
 
 		var itemData = {
 			"blocks": [
-				{ "name": "dirt", 				"pos": [1, 0] },
-				{ "name": "lava", 				"pos": [2, 0] },
-				{ "name": "white-door", 		"pos": [3, 0] },
-				{ "name": "bedrock", 			"pos": [4, 0] },
-				{ "name": "rock", 				"pos": [5, 0] },
-				{ "name": "door", 				"pos": [6, 0] },
-				{ "name": "grass", 				"pos": [8, 0] },
-				{ "name": "sign", 				"pos": [10, 0] },
-				{ "name": "daisy", 				"pos": [11, 0] },
-				{ "name": "arrow-sign",			"pos": [12, 0] },
-				{ "name": "crappy-sign",		"pos": [13, 0] },
-				{ "name": "danger-sign",		"pos": [14, 0] },
-				{ "name": "dungeon-door",		"pos": [15, 0] },
+				{ "name": "dirt", 				"pos": [1, 0],	"directional": false },
+				{ "name": "lava", 				"pos": [2, 0],	"directional": false },
+				{ "name": "white-door", 		"pos": [3, 0],	"directional": false },
+				{ "name": "bedrock", 			"pos": [4, 0],	"directional": false },
+				{ "name": "rock", 				"pos": [5, 0],	"directional": false },
+				{ "name": "door", 				"pos": [6, 0],	"directional": false },
+				{ "name": "grass", 				"pos": [8, 0],	"directional": false },
+				{ "name": "sign", 				"pos": [10, 0],	"directional": false },
+				{ "name": "daisy", 				"pos": [11, 0],	"directional": false },
+				{ "name": "arrow-sign",			"pos": [12, 0],	"directional": true },
+				{ "name": "crappy-sign",		"pos": [13, 0],	"directional": true },
+				{ "name": "danger-sign",		"pos": [14, 0],	"directional": true },
+				{ "name": "dungeon-door",		"pos": [15, 0],	"directional": false },
 
-				{ "name": "portcullis", 		"pos": [14, 1] },
-				{ "name": "boombox", 			"pos": [15, 1] },
+				{ "name": "portcullis", 		"pos": [14, 1],	"directional": false },
+				{ "name": "boombox", 			"pos": [15, 1],	"directional": false },
 
-				{ "name": "old-timey-radio", 	"pos": [0, 2] },
+				{ "name": "old-timey-radio", 	"pos": [0, 2],	"directional": true },
 
-				{ "name": "wood-block", 		"pos": [2, 3] },
-				{ "name": "wooden-platform",	"pos": [3, 3] },
-				{ "name": "toilet",				"pos": [5, 3] },
-				{ "name": "disco-ball",			"pos": [9, 3] },
-				{ "name": "bricks",				"pos": [10, 3] },
-				{ "name": "mystery-block",		"pos": [12, 3] },
+				{ "name": "wood-block", 		"pos": [2, 3],	"directional": false },
+				{ "name": "wooden-platform",	"pos": [3, 3],	"directional": false },
+				{ "name": "toilet",				"pos": [5, 3],	"directional": true },
+				{ "name": "disco-ball",			"pos": [9, 3],	"directional": false },
+				{ "name": "bricks",				"pos": [10, 3],	"directional": false },
+				{ "name": "mystery-block",		"pos": [12, 3],	"directional": false },
 			],
 
 			"backgrounds": [
@@ -169,7 +172,7 @@
 			this.blocks = [];
 			this.backgrounds = [];
 
-			this.selection = {"tab": "block", "item": 0};
+			this.selection = {"tab": "block", "item": 0, "flipped": false};
 
 			// Create stuff!
 			for (var y=0; y<h; y++) {
@@ -179,6 +182,11 @@
 		}
 		var world = new World(20, 15);
 		world.selection.tab = toolbox.tabGroup.value;
+
+		function PlacedBlock(id, flipped) {
+			this.id = id;
+			this.flipped = flipped;
+		}
 
 		// Initialise toolbox
 		var tabButtons = toolbox.tabGroup;
@@ -207,7 +215,19 @@
 			blockButtons[0].checked = true;
 			for (var i = 0; i < blockButtons.length; i++) {
 				blockButtons[i].addEventListener("click", function(event) {
-					world.selection.item = event.target.value;
+					var id = event.target.value;
+					if (world.selection.tab == "blocks") {
+						// Special case, we want to flip flippable items if we click multiple times
+						if ((world.selection.item == id) && (itemData.blocks[id].directional)) {
+							world.selection.flipped = !world.selection.flipped;
+						} else {
+							world.selection.flipped = false;
+						}
+					} else {
+						world.selection.flipped = false;
+					}
+					world.selection.item = id;
+					this.className = world.selection.flipped ? "flipped" : "";
 				});
 			}
 		}
@@ -243,9 +263,27 @@
 							context.drawImage(blocksImage, background.pos[0] * tileSize, background.pos[1] * tileSize, tileSize, tileSize, x * tileSize, y * tileSize, tileSize, tileSize);
 						}
 
-						var block = itemData.blocks[world.blocks[y][x]];
-						if (block) {
-							context.drawImage(blocksImage, block.pos[0] * tileSize, block.pos[1] * tileSize, tileSize, tileSize, x * tileSize, y * tileSize, tileSize, tileSize);
+						var pb = world.blocks[y][x];
+						if (pb) {
+							var block = itemData.blocks[pb.id];
+							if (block) {
+								// This is SUPER dumb, and I hate it. Why can't I just pass a -ve dest size and have it flip?
+								// TODO: rather than flipping the canvas then flipping it back for each, maybe just flip/unflip whenever the
+								// state actually changes? So if we have 10 flipped in a row, we only change once.
+								if (pb.flipped) {
+									context.save();
+									context.translate(canvas.width, 0);
+									context.scale(-1, 1);
+									// But now, the coordinates are all wrong! So we need to invert them, and aagagahgahgahgahgahgahgahaghaghaghhhhhhhhhhh
+									context.drawImage(blocksImage, block.pos[0] * tileSize, block.pos[1] * tileSize, tileSize, tileSize,
+													  canvas.width - (x * tileSize), y * tileSize, -tileSize, tileSize);
+									// I hope I never have to touch this again.
+									context.restore();
+								} else {
+									context.drawImage(blocksImage, block.pos[0] * tileSize, block.pos[1] * tileSize, tileSize, tileSize,
+													  x * tileSize, y * tileSize, tileSize, tileSize);
+								}
+							}
 						}
 					}
 				}
@@ -261,7 +299,7 @@
 					// Actually do something.
 					switch (world.selection.tab) {
 						case "blocks": {
-							world.blocks[ty][tx] = world.selection.item;
+							world.blocks[ty][tx] = new PlacedBlock(world.selection.item, world.selection.flipped);
 						} break;
 						case "backgrounds": {
 							world.backgrounds[ty][tx] = world.selection.item;
