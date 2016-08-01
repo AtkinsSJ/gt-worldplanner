@@ -17,40 +17,42 @@
 			position: fixed;
 			background: lightgreen;
 			padding: 0;
-			top: 3.5em;
-			bottom: 1em;
-			left: 1em;
-			border-radius: 0 0 0.5em 0.5em;
+			top: 0;
+			bottom: 0;
+			left: 0;
 		}
-		.tab {
-			display: inline;
+
+		#tools {
+			padding: 0;
+			margin: 0;
 		}
-		.tab-radio {
-			display: none;
-		}
-		.tab-label {
-			cursor: pointer;
-			background: green;
-			padding: 0.5em;
-			border-radius: 0.5em 0.5em 0 0;
-			position: relative;
-			top: -1.6em;
-		}
-		.tab-content {
-			display: none;
-			position: absolute;
-			top: 0.25em;
-			bottom: 0.25em;
-			left: 0.25em;
-			right: 0.25em;
-			overflow: auto;
-		}
-		.tab-radio:checked ~ label {
-			background: lightgreen;
-		}
-		.tab-radio:checked ~ .tab-content {
+		#tools button {
 			display: block;
+			width: 100%;
+			background: white;
 		}
+		#tools button.selected {
+			background: yellow;
+		}
+
+		#palette {
+			position: absolute;
+			left: 100%;
+			top: 0px;
+			bottom: 0px;
+			width: 200px;
+		}
+
+		.palette-content {
+			display: none;
+			background: green;
+			width: 100%;
+			height: 100%;
+		} 
+		.palette-content.visible {
+			display: block;
+		} 
+
 
 		.item {
 			width: 32px;
@@ -95,27 +97,21 @@
 	</style>
 </head>
 <body>
-	<form id="toolbox">
-		<div class="tab">
-			<input class="tab-radio" type="radio" id="tab-blocks" name="tabGroup" value="blocks" checked />
-			<label class="tab-label" for="tab-blocks">Blocks</label>
-			<section class="tab-content" id="list-blocks"></section>
-		</div>
-		<div class="tab">
-			<input class="tab-radio" type="radio" id="tab-backgrounds" name="tabGroup" value="backgrounds" />
-			<label class="tab-label" for="tab-backgrounds">Wallpaper</label>
-			<section class="tab-content" id="list-backgrounds">
-				Backgrounds go here
-			</section>
-		</div>
-		<div class="tab">
-			<input class="tab-radio" type="radio" id="tab-paints" name="tabGroup" value="paints" />
-			<label class="tab-label" for="tab-paint">Paint</label>
-			<section class="tab-content" id="list-paint">
-				Paint goes here
-			</section>
-		</div>
-	</form>
+
+	<nav id="toolbox">
+		<menu id="tools">
+			<button data-tool="pan" id="tool_pan">Pan</button>
+			<button data-tool="blocks" id="tool_block">Blocks</button>
+			<button data-tool="backgrounds" id="tool_wallpaper">Backgrounds</button>
+			<button data-tool="paint" id="tool_paint">Paint</button>
+		</menu>
+
+		<form id="palette">
+			<section class="palette-content" id="palette-blocks"></section>
+			<section class="palette-content" id="palette-backgrounds"></section>
+			<section class="palette-content" id="palette-paint"></section>
+		</form>
+	</nav>
 
 	<canvas id="canvas">
 		<p>Sorry, it looks like your web browser can't handle the awesomeness of this world planner! :(</p>
@@ -164,75 +160,115 @@
 		};
 
 		var canvas = document.getElementById("canvas");
-		var toolbox = document.forms.toolbox;
-
-		function World(w, h) {
-			this.w = w;
-			this.h = h;
-			this.blocks = [];
-			this.backgrounds = [];
-
-			this.selection = {"tab": "block", "item": 0, "flipped": false};
-
-			// Create stuff!
-			for (var y=0; y<h; y++) {
-				this.blocks[y] = [];
-				this.backgrounds[y] = [];
-			}
-		}
-		var world = new World(20, 15);
-		world.selection.tab = toolbox.tabGroup.value;
-
-		function PlacedBlock(id, flipped) {
-			this.id = id;
-			this.flipped = flipped;
-		}
-
-		// Initialise toolbox
-		var tabButtons = toolbox.tabGroup;
-		for (var i = 0; i < tabButtons.length; i++) {
-			tabButtons[i].addEventListener("click", function(event) {
-				world.selection.tab = event.target.value;
-
-				world.selection.item = toolbox["items-" + event.target.value].value;
-			});
-		}
-		for (var itemGroup in itemData) {
-			var blocksList = document.getElementById("list-" + itemGroup);
-			var blocksString = "";
-			for (var i = 0; i < itemData[itemGroup].length; i++) {
-				var item = itemData[itemGroup][i];
-				// Laborious element creation
-				blocksString += '<div class="item">\
-						<input type="radio" id="item-' + itemGroup + '-' + item.name + '" name="items-' + itemGroup + '" value="' + i +'" />\
-						<label for="item-' + itemGroup + '-' + item.name + '" style="background-position: '
-							+ (-32*item.pos[0]) +'px ' + (-32*item.pos[1]) + 'px"/>\
-					</div>';
-			}
-			blocksList.innerHTML = blocksString;
-
-			var blockButtons = toolbox["items-" + itemGroup];
-			blockButtons[0].checked = true;
-			for (var i = 0; i < blockButtons.length; i++) {
-				blockButtons[i].addEventListener("click", function(event) {
-					var id = event.target.value;
-					if (world.selection.tab == "blocks") {
-						// Special case, we want to flip flippable items if we click multiple times
-						if ((world.selection.item == id) && (itemData.blocks[id].directional)) {
-							world.selection.flipped = !world.selection.flipped;
-						} else {
-							world.selection.flipped = false;
-						}
-					} else {
-						world.selection.flipped = false;
-					}
-					world.selection.item = id;
-					this.className = world.selection.flipped ? "flipped" : "";
-				});
-			}
-		}
-
 		if (canvas.getContext) {
+
+			function World(w, h) {
+				this.w = w;
+				this.h = h;
+				this.blocks = [];
+				this.backgrounds = [];
+
+				// Create stuff!
+				for (var y=0; y<h; y++) {
+					this.blocks[y] = [];
+					this.backgrounds[y] = [];
+				}
+			}
+
+			function PlacedBlock(id, flipped) {
+				this.id = id;
+				this.flipped = flipped;
+			}
+
+			function Toolbox(element) {
+				this.currentTool = {
+					"tool": "pan",
+					"item": 0,
+					"flipped": false
+				};
+				this.toolButtons = {};
+				this.palettes = {};
+
+				var toolbox = this;
+				var paletteForm = document.forms.palette;
+
+				// Palettes
+				for (var itemGroup in itemData) {
+					var palette = document.getElementById("palette-" + itemGroup);
+					toolbox.palettes[itemGroup] = palette;
+
+					var paletteString = "";
+					for (var i = 0; i < itemData[itemGroup].length; i++) {
+						var item = itemData[itemGroup][i];
+						// Laborious element creation
+						paletteString += '<div class="item">\
+								<input type="radio" id="item-' + itemGroup + '-' + item.name + '" name="items-' + itemGroup + '" value="' + i +'" />\
+								<label for="item-' + itemGroup + '-' + item.name + '" style="background-position: '
+									+ (-32*item.pos[0]) +'px ' + (-32*item.pos[1]) + 'px"/>\
+							</div>';
+					}
+					palette.innerHTML = paletteString;
+
+					// Interactivity
+					var blockButtons = paletteForm["items-" + itemGroup];
+					blockButtons[0].checked = true;
+					for (var i = 0; i < blockButtons.length; i++) {
+						blockButtons[i].addEventListener("click", function(event) {
+							var id = event.target.value;
+							if (toolbox.currentTool.tool == "blocks") {
+								// Special case, we want to flip flippable items if we click multiple times
+								if ((toolbox.currentTool.item == id) && (itemData.blocks[id].directional)) {
+									toolbox.currentTool.flipped = !toolbox.currentTool.flipped;
+								} else {
+									toolbox.currentTool.flipped = false;
+								}
+							} else {
+								toolbox.currentTool.flipped = false;
+							}
+							toolbox.currentTool.item = id;
+
+							if (toolbox.currentTool.flipped) {
+								event.target.classList.add("flipped");
+							} else {
+								event.target.classList.remove("flipped");
+							}
+						});
+					}
+				}
+
+				// Buttons
+				var buttons = element.querySelectorAll("button");
+				for (var i = 0; i < buttons.length; i++) {
+					var b = buttons[i];
+					var tool = b.dataset.tool;
+					this.toolButtons[tool] = b;
+
+					b.addEventListener("click", function(event) {
+						var newTool = event.target.dataset.tool;
+
+						if (newTool != toolbox.currentTool) {
+							toolbox.toolButtons[toolbox.currentTool.tool].classList.remove("selected");
+							var oldPalette = toolbox.palettes[toolbox.currentTool.tool];
+							if (oldPalette) oldPalette.classList.remove("visible");
+
+							toolbox.currentTool.tool = newTool;
+
+							toolbox.toolButtons[toolbox.currentTool.tool].classList.add("selected");
+							var newPalette = toolbox.palettes[toolbox.currentTool.tool];
+							if (newPalette) newPalette.classList.add("visible");
+						}
+					});
+				}
+			}
+
+			var toolbox = new Toolbox(document.getElementById("toolbox"));
+
+			var currentTool = {
+				"tool": "pan"
+			};
+
+			var world = new World(20, 15);
+
 			var tileSize = 32;
 			var context = canvas.getContext("2d");
 
@@ -297,12 +333,16 @@
 				
 				if (tx >= 0 && tx < world.w && ty >= 0 && ty < world.h) {
 					// Actually do something.
-					switch (world.selection.tab) {
+					switch (toolbox.currentTool.tool) {
+						case "pan": {
+
+						} break;
+
 						case "blocks": {
-							world.blocks[ty][tx] = new PlacedBlock(world.selection.item, world.selection.flipped);
+							world.blocks[ty][tx] = new PlacedBlock(toolbox.currentTool.item, toolbox.currentTool.flipped);
 						} break;
 						case "backgrounds": {
-							world.backgrounds[ty][tx] = world.selection.item;
+							world.backgrounds[ty][tx] = toolbox.currentTool.item;
 						} break;
 					}
 				}
