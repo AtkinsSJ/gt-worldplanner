@@ -29,10 +29,18 @@
 		#tools button {
 			display: block;
 			width: 100%;
+			border: 2px solid black;
 			background: white;
+			margin: 0;
+			padding: 0;
 		}
 		#tools button.selected {
-			background: yellow;
+			background-color: yellow;
+		}
+		#tools button .image {
+			width: 32px;
+			height: 32px;
+			background: no-repeat center;
 		}
 
 		#palette {
@@ -100,10 +108,10 @@
 
 	<nav id="toolbox">
 		<menu id="tools">
-			<button data-tool="pan" id="tool_pan">Pan</button>
-			<button data-tool="blocks" id="tool_block">Blocks</button>
-			<button data-tool="backgrounds" id="tool_wallpaper">Backgrounds</button>
-			<button data-tool="paint" id="tool_paint">Paint</button>
+			<button data-tool="pan" id="tool_pan"><div class="image" style="background-image: url('img/icons.png')" /></button>
+			<button data-tool="blocks" id="tool_block"><div class="image" style="background-image: url('img/item-sprites.png')" /></button>
+			<button data-tool="backgrounds" id="tool_wallpaper"><div class="image" style="background-image: url('img/item-sprites.png')" /></button>
+			<button data-tool="paint" id="tool_paint"><div class="image" style="background-image: url('img/icons.png')" /></button>
 		</menu>
 
 		<form id="palette">
@@ -189,6 +197,20 @@
 				this.toolButtons = {};
 				this.palettes = {};
 
+				this.setTool = function(toolName) {
+					if (toolName != toolbox.currentTool) {
+						toolbox.toolButtons[toolbox.currentTool.tool].classList.remove("selected");
+						var oldPalette = toolbox.palettes[toolbox.currentTool.tool];
+						if (oldPalette) oldPalette.classList.remove("visible");
+
+						toolbox.currentTool.tool = toolName;
+
+						toolbox.toolButtons[toolbox.currentTool.tool].classList.add("selected");
+						var newPalette = toolbox.palettes[toolbox.currentTool.tool];
+						if (newPalette) newPalette.classList.add("visible");
+					}
+				};
+
 				var toolbox = this;
 				var paletteForm = document.forms.palette;
 
@@ -209,28 +231,35 @@
 					}
 					palette.innerHTML = paletteString;
 
-					// Interactivity
+					// Palette item selection
 					var blockButtons = paletteForm["items-" + itemGroup];
 					blockButtons[0].checked = true;
 					for (var i = 0; i < blockButtons.length; i++) {
 						blockButtons[i].addEventListener("click", function(event) {
 							var id = event.target.value;
-							if (toolbox.currentTool.tool == "blocks") {
-								// Special case, we want to flip flippable items if we click multiple times
-								if ((toolbox.currentTool.item == id) && (itemData.blocks[id].directional)) {
-									toolbox.currentTool.flipped = !toolbox.currentTool.flipped;
-								} else {
-									toolbox.currentTool.flipped = false;
-								}
-							} else {
-								toolbox.currentTool.flipped = false;
-							}
-							toolbox.currentTool.item = id;
 
-							if (toolbox.currentTool.flipped) {
-								event.target.classList.add("flipped");
-							} else {
-								event.target.classList.remove("flipped");
+							switch (toolbox.currentTool.tool) {
+								case "blocks": {
+									// Special case, we want to flip flippable items if we click multiple times
+									if ((toolbox.currentTool.block == id) && (itemData.blocks[id].directional)) {
+										toolbox.currentTool.flipped = !toolbox.currentTool.flipped;
+									} else {
+										toolbox.currentTool.block = id;
+										toolbox.currentTool.flipped = false;
+									}
+
+									if (toolbox.currentTool.flipped) {
+										event.target.classList.add("flipped");
+									} else {
+										event.target.classList.remove("flipped");
+									}
+								} break;
+
+								case "backgrounds": {
+									toolbox.currentTool.background = id;
+									toolbox.currentTool.flipped = false;
+									// toolbox.toolButtons[id].
+								} break;
 							}
 						});
 					}
@@ -244,28 +273,14 @@
 					this.toolButtons[tool] = b;
 
 					b.addEventListener("click", function(event) {
-						var newTool = event.target.dataset.tool;
-
-						if (newTool != toolbox.currentTool) {
-							toolbox.toolButtons[toolbox.currentTool.tool].classList.remove("selected");
-							var oldPalette = toolbox.palettes[toolbox.currentTool.tool];
-							if (oldPalette) oldPalette.classList.remove("visible");
-
-							toolbox.currentTool.tool = newTool;
-
-							toolbox.toolButtons[toolbox.currentTool.tool].classList.add("selected");
-							var newPalette = toolbox.palettes[toolbox.currentTool.tool];
-							if (newPalette) newPalette.classList.add("visible");
-						}
+						toolbox.setTool(event.target.dataset.tool);
 					});
 				}
+
+				this.setTool("pan");
 			}
 
 			var toolbox = new Toolbox(document.getElementById("toolbox"));
-
-			var currentTool = {
-				"tool": "pan"
-			};
 
 			var world = new World(20, 15);
 
@@ -313,8 +328,7 @@
 									// But now, the coordinates are all wrong! So we need to invert them, and aagagahgahgahgahgahgahgahaghaghaghhhhhhhhhhh
 									context.drawImage(blocksImage, block.pos[0] * tileSize, block.pos[1] * tileSize, tileSize, tileSize,
 													  canvas.width - (x * tileSize), y * tileSize, -tileSize, tileSize);
-									// I hope I never have to touch this again.
-									context.restore();
+									// I hope I never have to 
 								} else {
 									context.drawImage(blocksImage, block.pos[0] * tileSize, block.pos[1] * tileSize, tileSize, tileSize,
 													  x * tileSize, y * tileSize, tileSize, tileSize);
@@ -334,20 +348,19 @@
 				if (tx >= 0 && tx < world.w && ty >= 0 && ty < world.h) {
 					// Actually do something.
 					switch (toolbox.currentTool.tool) {
-						case "pan": {
-
-						} break;
-
 						case "blocks": {
-							world.blocks[ty][tx] = new PlacedBlock(toolbox.currentTool.item, toolbox.currentTool.flipped);
+							world.blocks[ty][tx] = new PlacedBlock(toolbox.currentTool.block, toolbox.currentTool.flipped);
 						} break;
 						case "backgrounds": {
-							world.backgrounds[ty][tx] = toolbox.currentTool.item;
+							world.backgrounds[ty][tx] = toolbox.currentTool.background;
 						} break;
 					}
+					redraw(context, world);
 				}
 
-				redraw(context, world);
+			});
+			canvas.addEventListener("dragging", function(event) {
+				console.log("dragging!", event);
 			});
 		}
 	</script>
